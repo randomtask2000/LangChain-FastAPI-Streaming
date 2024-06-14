@@ -2,7 +2,7 @@ import json
 
 import requests
 
-url = "http://localhost:6677/stream_chat"
+url = "http://localhost:8000/stream_chat"
 message = "Hello, how are you?"
 data = {"content": message}
 
