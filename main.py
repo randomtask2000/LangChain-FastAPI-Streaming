@@ -31,9 +31,8 @@ app.add_middleware(
 )
 
 
-
-#app.mount("/", StaticFiles(directory=".", html=True), name="static")
 app.mount("/static", StaticFiles(directory=".", html=True), name="static")
+
 
 @app.get("/hi")
 def read_root():
@@ -43,6 +42,7 @@ def read_root():
 class Message(BaseModel):
     role: str
     content: str
+
 
 class ChatHistory(BaseModel):
     messages: List[Message]
@@ -86,9 +86,9 @@ async def stream_chat(message: Message):
     return StreamingResponse(generator, media_type="text/event-stream")
 
 
-# async def verify_authorization(authorization: Optional[str] = Header(None)):
-#     # if authorization != "Bearer my_key_something": # should be !=
-#     #     raise HTTPException(status_code=401, detail="Unauthorized")
+async def verify_authorization(authorization: Optional[str] = Header(None)):
+    if authorization != "Bearer my_key_something": # should be !=
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 async def process_message_history(messages: List[Message]) -> AsyncIterable[str]:
@@ -114,13 +114,6 @@ async def process_message_history(messages: List[Message]) -> AsyncIterable[str]
             msg = AIMessage(content=message.content)
         else:
             msg = HumanMessage(content=message.content)  # Default to HumanMessage
-        msgs.append(msg)
-
-    for message in messages:
-        if message.role in ["human", "user"]:
-            msg = HumanMessage(content=message.content)
-        else:
-            msg = HumanMessage(content=message.content)
         msgs.append(msg)
 
     task = asyncio.create_task(

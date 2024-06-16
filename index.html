@@ -56,95 +56,54 @@
         <div id="result"></div>
         <label for="message"></label><input type="text" id="message" placeholder="Type your message here"/>
         <button onclick="sendMessage()">Send Message</button>
-        <button onclick="sendMessageHistory()">Send Message History</button>
-        <button onclick="sendMessageAIHistory()">Send Message AI History</button>
+        <button onclick="sendMessageTokenHistory()">Send Message History</button>
+        <button onclick="sendMessageTokenAndAiHistory()">Send Message AI History</button>
     </div>
 
     <script>
+        let messageHistory = [];
         async function sendMessage() {
             let message = document.getElementById("message").value;
-            let response = await fetch('http://localhost:8000/stream_chat/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ content: message })
-            });
-
+            let response = await fetchAi([{role: "user", content: message}]);
             let reader = response.body.getReader();
             let decoder = new TextDecoder('utf-8');
-
-            reader.read().then(function processResult(result) {
-                if (result.done) return;
-                let token = decoder.decode(result.value);
-                if (token.endsWith('.') || token.endsWith('!') || token.endsWith('?')) {
-                    document.getElementById("result").innerHTML += token + "<br>";
-                } else {
-                    document.getElementById("result").innerHTML += token + ' ';
-                }
-                return reader.read().then(processResult);
+            await printResponse(reader, decoder);
+        }
+        async function sendMessageTokenHistory() {
+            let message = document.getElementById("message").value;
+            messageHistory.push({role: "user", content: message}); // add tokens to history
+            let response = await fetchAi(messageHistory);
+            let reader = response.body.getReader();
+            let decoder = new TextDecoder('utf-8');
+            await printResponse(reader, decoder);
+        }
+        async function sendMessageTokenAndAiHistory() {
+            let message = document.getElementById("message").value;
+            messageHistory.push({role: "user", content: message}); // add tokens to history
+            let response = await fetchAi(messageHistory);
+            let reader = response.body.getReader();
+            let decoder = new TextDecoder('utf-8');
+            printResponse(reader, decoder).then(response => {
+                messageHistory.push({role: "assistant", content: response}); // add AI response to history
             });
         }
-
-        let messages = [];
-        async function sendMessageHistory() {
-            let message = document.getElementById("message").value;
-            messages.push({ role: "user", content: message });
-            let content = JSON.stringify({ messages: messages });
-
-            let response = await fetch('http://localhost:8000/stream_history/', {
+        async function fetchAi(history) {
+            let content = JSON.stringify({messages: history});
+            return await fetch('http://localhost:8000/stream_history/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: content
-            });
-
-            let reader = response.body.getReader();
-            let decoder = new TextDecoder('utf-8');
-
-            reader.read().then(function processResult(result) {
-                if (result.done) return;
-                let token = decoder.decode(result.value);
-                if (token.endsWith('.') || token.endsWith('!') || token.endsWith('?')) {
-                    document.getElementById("result").innerHTML += token + "<br>";
-                } else {
-                    document.getElementById("result").innerHTML += token + ' ';
-                }
-                return reader.read().then(processResult);
             });
         }
-        let airesponse = '';
-        async function sendMessageAIHistory() {
-            let message = document.getElementById("message").value;
-            messages.push({ role: "assistant", content: airesponse });
-            messages.push({ role: "user", content: message });
-
-            let content = JSON.stringify({ messages: messages });
-
-            let response = await fetch('http://localhost:8000/stream_history/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: content
-            });
-
-            let reader = response.body.getReader();
-            let decoder = new TextDecoder('utf-8');
-            let aiResponse = '';
-            document.getElementById("result").innerHTML += "<br/><br/>"
-            reader.read().then(function processResult(result) {
+        async function printResponse(reader, decoder) {
+            document.getElementById("result").innerHTML += "<br/>";
+            let lastResponse = '';
+            await reader.read().then(function processResult(result) {
                 if (result.done) {
-                    // Append the complete AI response within a <div> element
-                    document.getElementById("result").innerHTML += `${aiResponse}`;
-                    // Update the messages with the AI response
-                    messages.push({ role: "assistant", content: aiResponse });
                     return;
                 }
                 let token = decoder.decode(result.value);
-                aiResponse += token;  // Accumulate the AI response
-
+                lastResponse += token;
                 if (token.endsWith('.') || token.endsWith('!') || token.endsWith('?')) {
                     document.getElementById("result").innerHTML += `${token}</br>`;
                 } else {
@@ -152,6 +111,7 @@
                 }
                 return reader.read().then(processResult);
             });
+            return lastResponse;
         }
     </script>
 
