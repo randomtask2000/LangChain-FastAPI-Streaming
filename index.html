@@ -54,15 +54,16 @@
     <div class="chat-container">
         <h1>Chat with AI</h1>
         <div id="result"></div>
-
-        <input type="text" id="message" placeholder="Type your message here">
+        <label for="message"></label><input type="text" id="message" placeholder="Type your message here"/>
         <button onclick="sendMessage()">Send Message</button>
+        <button onclick="sendMessageHistory()">Send Message History</button>
+        <button onclick="sendMessageAIHistory()">Send Message AI History</button>
     </div>
 
     <script>
         async function sendMessage() {
-            var message = document.getElementById("message").value;
-            var response = await fetch('http://localhost:8000/stream_chat/', {
+            let message = document.getElementById("message").value;
+            let response = await fetch('http://localhost:8000/stream_chat/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -70,8 +71,8 @@
                 body: JSON.stringify({ content: message })
             });
 
-            var reader = response.body.getReader();
-            var decoder = new TextDecoder('utf-8');
+            let reader = response.body.getReader();
+            let decoder = new TextDecoder('utf-8');
 
             reader.read().then(function processResult(result) {
                 if (result.done) return;
@@ -83,7 +84,74 @@
                 }
                 return reader.read().then(processResult);
             });
+        }
 
+        let messages = [];
+        async function sendMessageHistory() {
+            let message = document.getElementById("message").value;
+            messages.push({ role: "user", content: message });
+            let content = JSON.stringify({ messages: messages });
+
+            let response = await fetch('http://localhost:8000/stream_history/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: content
+            });
+
+            let reader = response.body.getReader();
+            let decoder = new TextDecoder('utf-8');
+
+            reader.read().then(function processResult(result) {
+                if (result.done) return;
+                let token = decoder.decode(result.value);
+                if (token.endsWith('.') || token.endsWith('!') || token.endsWith('?')) {
+                    document.getElementById("result").innerHTML += token + "<br>";
+                } else {
+                    document.getElementById("result").innerHTML += token + ' ';
+                }
+                return reader.read().then(processResult);
+            });
+        }
+        let airesponse = '';
+        async function sendMessageAIHistory() {
+            let message = document.getElementById("message").value;
+            messages.push({ role: "assistant", content: airesponse });
+            messages.push({ role: "user", content: message });
+
+            let content = JSON.stringify({ messages: messages });
+
+            let response = await fetch('http://localhost:8000/stream_history/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: content
+            });
+
+            let reader = response.body.getReader();
+            let decoder = new TextDecoder('utf-8');
+            let aiResponse = '';
+            document.getElementById("result").innerHTML += "<br/><br/>"
+            reader.read().then(function processResult(result) {
+                if (result.done) {
+                    // Append the complete AI response within a <div> element
+                    document.getElementById("result").innerHTML += `${aiResponse}`;
+                    // Update the messages with the AI response
+                    messages.push({ role: "assistant", content: aiResponse });
+                    return;
+                }
+                let token = decoder.decode(result.value);
+                aiResponse += token;  // Accumulate the AI response
+
+                if (token.endsWith('.') || token.endsWith('!') || token.endsWith('?')) {
+                    document.getElementById("result").innerHTML += `${token}</br>`;
+                } else {
+                    document.getElementById("result").innerHTML += `${token}`;
+                }
+                return reader.read().then(processResult);
+            });
         }
     </script>
 
