@@ -33,6 +33,7 @@
 
         .chatBubble {
             padding: 10px 20px;
+            margin-bottom: 10px;
             border: none;
             border-radius: 5px;
             background-color: #007BFF;
@@ -71,31 +72,22 @@
     <script>
         let messageHistory = [];
         async function sendMessage() {
-            let message = document.getElementById("message").value;
-            let response = await fetchAi([{role: "user", content: message}]);
-            let reader = response.body.getReader();
-            let decoder = new TextDecoder('utf-8');
-            let divID = addDiv();
-            await printResponse(reader, decoder, divID);
+            const message = document.getElementById('message').value;
+            const response = await fetchAi([{ role: 'user', content: message }]);
+            await printResponse(response.body.getReader(), new TextDecoder('utf-8'), addDiv());
         }
         async function sendMessageTokenHistory() {
-            let message = document.getElementById("message").value;
-            messageHistory.push({role: "user", content: message}); // add tokens to history
-            let response = await fetchAi(messageHistory);
-            let reader = response.body.getReader();
-            let decoder = new TextDecoder('utf-8');
-            let divID = addDiv();
-            await printResponse(reader, decoder, divID);
+            const message = document.getElementById('message').value;
+            messageHistory.push({ role: 'user', content: message });
+            const response = await fetchAi(messageHistory);
+            await printResponse(response.body.getReader(), new TextDecoder('utf-8'), addDiv());
         }
         async function sendMessageTokenAndAiHistory() {
-            let message = document.getElementById("message").value;
-            messageHistory.push({role: "user", content: message}); // add tokens to history
-            let response = await fetchAi(messageHistory);
-            let reader = response.body.getReader();
-            let decoder = new TextDecoder('utf-8');
-            let divID = addDiv();
-            await printResponse(reader, decoder, divID).then(response => {
-                messageHistory.push({role: "assistant", content: response}); // add AI response to history
+            const message = document.getElementById("message").value;
+            messageHistory.push({role: "user", content: message});
+            const response = await fetchAi(messageHistory);
+            await printResponse(response.body.getReader(),new TextDecoder('utf-8'), addDiv()).then(content => {
+                messageHistory.push({role: "assistant", content});
             });
         }
         async function fetchAi(history) {
@@ -106,30 +98,27 @@
                 body: content
             });
         }
-        async function printResponse(reader, decoder, divID) {
+        async function printResponse(reader, decoder, responseDiv) {
             let lastResponse = '';
             await reader.read().then(function processResult(result) {
-                if (result.done) {
-                    return;
-                }
+                if (result.done) { return; }
                 let token = decoder.decode(result.value);
                 lastResponse += token;
                 if (token.endsWith('.') || token.endsWith('!') || token.endsWith('?')) {
-                    document.getElementById(divID).innerHTML += `${token}</br>`;
+                    document.getElementById(responseDiv).innerHTML += `${token}</br>`;
                 } else {
-                    document.getElementById(divID).innerHTML += `${token}`;
+                    document.getElementById(responseDiv).innerHTML += `${token}`;
                 }
                 return reader.read().then(processResult);
             });
             return lastResponse;
         }
-        function addDiv() {
-            let newDiv = document.createElement("div");
-            let dynamicId = "div" + Date.now();
-            newDiv.id = dynamicId;
-            newDiv.classList.add("chatBubble");
-            document.getElementById("result").appendChild(newDiv);
-            return dynamicId;
+        const addDiv = () => {
+            const newDiv = document.createElement('div');
+            newDiv.id = `div${Date.now()}`;
+            newDiv.classList.add('chatBubble');
+            document.getElementById('result').appendChild(newDiv);
+            return newDiv.id;
         }
     </script>
 
