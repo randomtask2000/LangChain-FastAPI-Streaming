@@ -31,6 +31,14 @@
             margin-bottom: 10px;
         }
 
+        .chatBubble {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007BFF;
+            color: white;
+        }
+
         #message {
             width: 70%;
             padding: 10px;
@@ -67,7 +75,8 @@
             let response = await fetchAi([{role: "user", content: message}]);
             let reader = response.body.getReader();
             let decoder = new TextDecoder('utf-8');
-            await printResponse(reader, decoder);
+            let divID = addDiv();
+            await printResponse(reader, decoder, divID);
         }
         async function sendMessageTokenHistory() {
             let message = document.getElementById("message").value;
@@ -75,7 +84,8 @@
             let response = await fetchAi(messageHistory);
             let reader = response.body.getReader();
             let decoder = new TextDecoder('utf-8');
-            await printResponse(reader, decoder);
+            let divID = addDiv();
+            await printResponse(reader, decoder, divID);
         }
         async function sendMessageTokenAndAiHistory() {
             let message = document.getElementById("message").value;
@@ -83,7 +93,8 @@
             let response = await fetchAi(messageHistory);
             let reader = response.body.getReader();
             let decoder = new TextDecoder('utf-8');
-            printResponse(reader, decoder).then(response => {
+            let divID = addDiv();
+            await printResponse(reader, decoder, divID).then(response => {
                 messageHistory.push({role: "assistant", content: response}); // add AI response to history
             });
         }
@@ -95,8 +106,7 @@
                 body: content
             });
         }
-        async function printResponse(reader, decoder) {
-            document.getElementById("result").innerHTML += "<br/>";
+        async function printResponse(reader, decoder, divID) {
             let lastResponse = '';
             await reader.read().then(function processResult(result) {
                 if (result.done) {
@@ -105,13 +115,21 @@
                 let token = decoder.decode(result.value);
                 lastResponse += token;
                 if (token.endsWith('.') || token.endsWith('!') || token.endsWith('?')) {
-                    document.getElementById("result").innerHTML += `${token}</br>`;
+                    document.getElementById(divID).innerHTML += `${token}</br>`;
                 } else {
-                    document.getElementById("result").innerHTML += `${token}`;
+                    document.getElementById(divID).innerHTML += `${token}`;
                 }
                 return reader.read().then(processResult);
             });
             return lastResponse;
+        }
+        function addDiv() {
+            let newDiv = document.createElement("div");
+            let dynamicId = "div" + Date.now();
+            newDiv.id = dynamicId;
+            newDiv.classList.add("chatBubble");
+            document.getElementById("result").appendChild(newDiv);
+            return dynamicId;
         }
     </script>
 
