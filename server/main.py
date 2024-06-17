@@ -17,7 +17,7 @@ from utils.history import MessagesCollection
 
 load_dotenv()
 API_KEY = os.getenv('OPENAI_API_KEY', 'default_value_if_not_found')
-MODEL = os.getenv('MODEL', 'gpt-3.5-turbogpt-3.5-turbo')
+MODEL = os.getenv('MODEL', 'gpt-3.5-turbo')
 
 
 app = FastAPI()
@@ -86,7 +86,7 @@ async def stream_chat(message: Message):
 
 
 async def verify_authorization(authorization: Optional[str] = Header(None)):
-    if authorization != "Bearer my_key_something": # should be !=
+    if authorization != "Bearer my_key_something":
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
