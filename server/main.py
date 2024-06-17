@@ -13,8 +13,6 @@ from pydantic import BaseModel
 from langchain.callbacks.streaming_aiter import AsyncIteratorCallbackHandler
 from starlette.staticfiles import StaticFiles
 
-from utils.history import MessagesCollection
-
 load_dotenv()
 API_KEY = os.getenv('OPENAI_API_KEY', 'default_value_if_not_found')
 MODEL = os.getenv('MODEL', 'gpt-3.5-turbo')
