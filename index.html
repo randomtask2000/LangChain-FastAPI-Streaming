@@ -78,7 +78,7 @@
             justify-content: right; /* Centers horizontally */
         }
 
-        #message {
+        #tokenInput {
             width: 70%;
             padding: 10px;
             margin-right: 10px;
@@ -103,36 +103,48 @@
     <div class="chat-container">
         <h1>Chat with your AI</h1>
         <div id="result"></div>
-        <label for="message"></label><input type="text" id="message" placeholder="Type your message here"/>
-        <button onclick="sendMessage()">Send Message</button>
-        <button onclick="sendMessageTokenHistory()">Send Message History</button>
-        <button onclick="sendMessageTokenAndAiHistory()">Send Message AI History</button>
+        <label for="tokenInput"></label><input type="text" id="tokenInput" placeholder="Type your message here" />
+        <button onclick="sendTokens()">Send Message</button>
+        <button onclick="sendUserTokenHistory()">Send Message History</button>
+        <button onclick="sendUserTokenAiHistory()">Send Message AI History</button>
     </div>
 
     <script>
-        let messageHistory = [];
+        let tokenHistory = [];
         let chatAiBubbleClass = 'chatAiBubble';
         let chatTokenBubbleClass = 'chatTokenBubble'
-        async function sendMessage() {
-            const message = document.getElementById('message').value;
-            await printMessage(addAiResponseDiv(chatTokenBubbleClass), message);
-            const response = await fetchAi([{ role: 'user', content: message }]);
+
+        document.getElementById('tokenInput').addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                sendUserTokenAiHistory();
+            }
+        });
+        function getToken() {
+            const token =  document.getElementById('tokenInput').value;
+            document.getElementById('tokenInput').value = '';
+            return token;
+        }
+
+        async function sendTokens() {
+            const token = getToken();
+            await printMessage(addAiResponseDiv(chatTokenBubbleClass), token);
+            const response = await fetchAi([{ role: 'user', content: token }]);
             await printResponse(response.body.getReader(), new TextDecoder('utf-8'), addAiResponseDiv(chatAiBubbleClass));
         }
-        async function sendMessageTokenHistory() {
-            const message = document.getElementById('message').value;
-            messageHistory.push({ role: 'user', content: message });
-            await printMessage(addAiResponseDiv(chatTokenBubbleClass), message);
-            const response = await fetchAi(messageHistory);
+        async function sendUserTokenHistory() {
+            const token = getToken();
+            tokenHistory.push({ role: 'user', content: token });
+            await printMessage(addAiResponseDiv(chatTokenBubbleClass), token);
+            const response = await fetchAi(tokenHistory);
             await printResponse(response.body.getReader(), new TextDecoder('utf-8'), addAiResponseDiv(chatAiBubbleClass));
         }
-        async function sendMessageTokenAndAiHistory() {
-            const message = document.getElementById("message").value;
-            messageHistory.push({role: "user", content: message});
-            await printMessage(addAiResponseDiv(chatTokenBubbleClass), message);
-            const response = await fetchAi(messageHistory);
+        async function sendUserTokenAiHistory() {
+            const token = getToken();
+            tokenHistory.push({role: "user", content: token});
+            await printMessage(addAiResponseDiv(chatTokenBubbleClass), token);
+            const response = await fetchAi(tokenHistory);
             await printResponse(response.body.getReader(), new TextDecoder('utf-8'), addAiResponseDiv(chatAiBubbleClass)).then(content => {
-                messageHistory.push({role: "assistant", content});
+                tokenHistory.push({role: "assistant", content});
             });
         }
         async function fetchAi(history) {

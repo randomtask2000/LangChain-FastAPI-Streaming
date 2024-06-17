@@ -45,50 +45,12 @@ class ChatHistory(BaseModel):
     messages: List[Message]
 
 
-async def send_message(content: str) -> AsyncIterable[str]:
-    callback = AsyncIteratorCallbackHandler()
-    model = ChatOpenAI(
-        streaming=True,
-        verbose=True,
-        callbacks=[callback],
-        openai_api_key=API_KEY,
-        model_name="gpt-3.5-turbo",
-    )
-
-    system_message = SystemMessage(content="""
-            You are a helpful assistant named Buddy.
-        """)
-
-    human_message = HumanMessage(content=content)
-
-    task = asyncio.create_task(
-        # model.agenerate(messages=[[HumanMessage(content=content)]])
-        model.agenerate(messages=[[system_message, human_message]])
-    )
-
-    try:
-        async for token in callback.aiter():
-            yield token
-    except Exception as e:
-        print(f"Caught exception: {e}")
-    finally:
-        callback.done.set()
-
-    await task
-
-
-@app.post("/stream_chat/")
-async def stream_chat(message: Message):
-    generator = send_message(message.content)
-    return StreamingResponse(generator, media_type="text/event-stream")
-
-
 async def verify_authorization(authorization: Optional[str] = Header(None)):
     if authorization != "Bearer my_key_something":
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
-async def process_message_history(messages: List[Message]) -> AsyncIterable[str]:
+async def process_tokens_history(tokens: List[Message]) -> AsyncIterable[str]:
     callback = AsyncIteratorCallbackHandler()
     model = ChatOpenAI(
         streaming=True,
@@ -97,24 +59,24 @@ async def process_message_history(messages: List[Message]) -> AsyncIterable[str]
         openai_api_key=API_KEY,
         model_name=MODEL,
     )
-    new_message_list: List[BaseMessage] = []
+    new_token_list: List[BaseMessage] = []
     system_message = SystemMessage(content="""
                 You are a helpful assistant named Buddy.
             """)
 
-    new_message_list.append(system_message)
+    new_token_list.append(system_message)
 
-    for message in messages:
-        if message.role in ["human", "user"]:
-            msg = HumanMessage(content=message.content)
-        elif message.role in ["assistant", "ai"]:
-            msg = AIMessage(content=message.content)
+    for token in tokens:
+        if token.role in ["human", "user"]:
+            msg = HumanMessage(content=token.content)
+        elif token.role in ["assistant", "ai"]:
+            msg = AIMessage(content=token.content)
         else:
-            msg = HumanMessage(content=message.content)  # Default to HumanMessage
-        new_message_list.append(msg)
+            msg = HumanMessage(content=token.content)  # Default to HumanMessage
+        new_token_list.append(msg)
 
     task = asyncio.create_task(
-        model.agenerate(messages=[new_message_list])
+        model.agenerate(messages=[new_token_list])
     )
 
     try:
@@ -133,7 +95,7 @@ async def stream_history(
         chat_history: ChatHistory
         # , authorization: Optional[str] = Depends(verify_authorization)
 ):
-    generator = process_message_history(chat_history.messages)
+    generator = process_tokens_history(chat_history.messages)
     return StreamingResponse(generator, media_type="text/event-stream")
 
 
