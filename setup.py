@@ -11,6 +11,7 @@ setup(
         "uvicorn",
         "python-dotenv",
         "fastapi",
+        "langchain",
         "langchain-community",
         "langchain-core",
         "pydantic",
