@@ -16,7 +16,7 @@
 
         .chat-container {
             border-radius: 5px;
-            background-color: white;
+            background-color: #f8f8f8;
             padding: 20px;
             max-width: 500px;
             width: 100%;
@@ -26,13 +26,38 @@
         #result {
             height: 400px;
             overflow-y: auto;
-            border: 1px solid #ccc;
+            border: 1px solid #e0e0e0;
             padding: 10px;
             margin-bottom: 10px;
+            border-radius: 3px;
+            background-color: #fafafa;
         }
 
-        .chatBubble {
+        .chatAiBubble {
             padding: 10px 20px;
+            margin-right: 50px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #53b639;
+            background-image: linear-gradient(to top, #53b639, #8de778);
+            color: white;
+            position: relative;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .outer-chatAiBubble {
+            border-radius: 0px;
+            background-color: #f8f8f8;
+            padding: 0px;
+            display: flex;
+            justify-content: left; /* Centers horizontally */
+        }
+
+        .chatTokenBubble {
+            padding: 10px 20px;
+            margin-left: 50px;
+            margin-right: 0;
             margin-bottom: 10px;
             border: none;
             border-radius: 5px;
@@ -40,6 +65,17 @@
             background-image: linear-gradient(to top, #007BFF, #7ab1ec);
             color: white;
             position: relative;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            text-align: right;  /* Align text to the right */
+            display: inline-block;  /* Make the width as small as needed */
+        }
+
+        .outer-chatTokenBubble {
+            border-radius: 0px;
+            background-color: #f8f8f8;
+            padding: 0px;
+            display: flex;
+            justify-content: right; /* Centers horizontally */
         }
 
         #message {
@@ -75,22 +111,27 @@
 
     <script>
         let messageHistory = [];
+        let chatAiBubbleClass = 'chatAiBubble';
+        let chatTokenBubbleClass = 'chatTokenBubble'
         async function sendMessage() {
             const message = document.getElementById('message').value;
+            await printMessage(addAiResponseDiv(chatTokenBubbleClass), message);
             const response = await fetchAi([{ role: 'user', content: message }]);
-            await printResponse(response.body.getReader(), new TextDecoder('utf-8'), addDiv());
+            await printResponse(response.body.getReader(), new TextDecoder('utf-8'), addAiResponseDiv(chatAiBubbleClass));
         }
         async function sendMessageTokenHistory() {
             const message = document.getElementById('message').value;
             messageHistory.push({ role: 'user', content: message });
+            await printMessage(addAiResponseDiv(chatTokenBubbleClass), message);
             const response = await fetchAi(messageHistory);
-            await printResponse(response.body.getReader(), new TextDecoder('utf-8'), addDiv());
+            await printResponse(response.body.getReader(), new TextDecoder('utf-8'), addAiResponseDiv(chatAiBubbleClass));
         }
         async function sendMessageTokenAndAiHistory() {
             const message = document.getElementById("message").value;
             messageHistory.push({role: "user", content: message});
+            await printMessage(addAiResponseDiv(chatTokenBubbleClass), message);
             const response = await fetchAi(messageHistory);
-            await printResponse(response.body.getReader(),new TextDecoder('utf-8'), addDiv()).then(content => {
+            await printResponse(response.body.getReader(), new TextDecoder('utf-8'), addAiResponseDiv(chatAiBubbleClass)).then(content => {
                 messageHistory.push({role: "assistant", content});
             });
         }
@@ -113,16 +154,34 @@
                 } else {
                     document.getElementById(responseDiv).innerHTML += `${token}`;
                 }
+                scrollToBottom();
                 return reader.read().then(processResult);
             });
             return lastResponse;
         }
-        const addDiv = () => {
+        async function printMessage(responseDiv, tokens) {
+            document.getElementById(responseDiv).innerHTML = tokens;
+            await scrollToBottom();
+        }
+        const addAiResponseDiv = cssClass => {
+            const newOuterDiv = document.createElement('div');
             const newDiv = document.createElement('div');
+
+            newOuterDiv.classList.add(`outer-${cssClass}`);
             newDiv.id = `div${Date.now()}`;
-            newDiv.classList.add('chatBubble');
-            document.getElementById('result').appendChild(newDiv);
+            newDiv.classList.add(cssClass);
+
+            newOuterDiv.appendChild(newDiv);
+            document.getElementById('result').appendChild(newOuterDiv);
+
             return newDiv.id;
+        };
+        async function scrollToBottom() {
+            return new Promise((resolve) => {
+                let element = document.getElementById('result');
+                element.scrollTop = element.scrollHeight;
+                resolve();
+            });
         }
     </script>
 
