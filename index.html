@@ -40,7 +40,7 @@
             border: none;
             border-radius: 5px;
             background-color: #53b639;
-            background-image: linear-gradient(to top, #53b639, #8de778);
+            background-image: linear-gradient(to top, #53b639, #82d96e);
             color: white;
             position: relative;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
@@ -110,27 +110,39 @@
     </div>
 
     <script>
+        // An array to store the history of tokens
         let tokenHistory = [];
+
+        // Classes for styling chat bubbles
         let chatAiBubbleClass = 'chatAiBubble';
         let chatTokenBubbleClass = 'chatTokenBubble'
 
+
+        // Adding an event listener on 'Enter' keyup event on the token input field
+        // If 'Enter' is pressed, the sendUserTokenAiHistory function is called
         document.getElementById('tokenInput').addEventListener('keyup', function(event) {
             if (event.key === 'Enter') {
                 sendUserTokenAiHistory();
             }
         });
+
+        // Function to get the token message from the input field, clear the input field, and then return the token
         function getToken() {
             const token =  document.getElementById('tokenInput').value;
             document.getElementById('tokenInput').value = '';
             return token;
         }
 
+        // Function to send the entered tokens for further processing
+        // Fetches the token with getToken() and then sends it to a remote server for AI processing
+        // The response from the server is printed in the chat area
         async function sendTokens() {
             const token = getToken();
             await printMessage(addAiResponseDiv(chatTokenBubbleClass), token);
             const response = await fetchAi([{ role: 'user', content: token }]);
-            await printResponse(response.body.getReader(), new TextDecoder('utf-8'), addAiResponseDiv(chatAiBubbleClass));
+            await printMessage(addAiResponseDiv(chatTokenBubbleClass), response);
         }
+        //This function fetches the user's token and sends it to the AI assistant. It also pushes the token details into the token history.
         async function sendUserTokenHistory() {
             const token = getToken();
             tokenHistory.push({ role: 'user', content: token });
@@ -138,6 +150,7 @@
             const response = await fetchAi(tokenHistory);
             await printResponse(response.body.getReader(), new TextDecoder('utf-8'), addAiResponseDiv(chatAiBubbleClass));
         }
+        // Similar to `sendUserTokenHistory()`, but this function also pushes the AI assistant's response into the token history.
         async function sendUserTokenAiHistory() {
             const token = getToken();
             tokenHistory.push({role: "user", content: token});
@@ -147,6 +160,7 @@
                 tokenHistory.push({role: "assistant", content});
             });
         }
+        // This function sends a POST request to a local server with the chat history as a payload. It returns a promise that resolves to the response of that request.
         async function fetchAi(history) {
             let content = JSON.stringify({messages: history});
             return await fetch('http://localhost:8000/stream_history/', {
@@ -155,6 +169,7 @@
                 body: content
             });
         }
+        // This function reads from the response of the AI assistant, decodes it, and outputs it into an HTML div. It returns the entire response as a string.
         async function printResponse(reader, decoder, responseDiv) {
             let lastResponse = '';
             await reader.read().then(function processResult(result) {
@@ -171,10 +186,12 @@
             });
             return lastResponse;
         }
+        // This function takes a list of tokens and outputs them into a specified HTML div.
         async function printMessage(responseDiv, tokens) {
             document.getElementById(responseDiv).innerHTML = tokens;
             await scrollToBottom();
         }
+        // This function creates a new HTML div, assigns it a certain CSS class, appends it to a parent div, and returns its ID.
         const addAiResponseDiv = cssClass => {
             const newOuterDiv = document.createElement('div');
             const newDiv = document.createElement('div');
@@ -188,6 +205,7 @@
 
             return newDiv.id;
         };
+        // This function scrolls to the bottom of a specific HTML element ('result').
         async function scrollToBottom() {
             return new Promise((resolve) => {
                 let element = document.getElementById('result');

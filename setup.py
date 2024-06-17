@@ -14,6 +14,7 @@ setup(
         "langchain",
         "langchain-community",
         "langchain-core",
+        "langchain-openai",
         "pydantic",
         "starlette"
     ],

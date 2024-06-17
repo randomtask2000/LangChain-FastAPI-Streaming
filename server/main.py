@@ -1,22 +1,27 @@
+# standard library imports
 import asyncio
-from typing import AsyncIterable, List
 import os
+from typing import AsyncIterable, List, Optional
+
+# related third party imports
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from langchain_community.chat_models import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
-from typing import List, Optional
-from pydantic import BaseModel
 from langchain.callbacks.streaming_aiter import AsyncIteratorCallbackHandler
+
+# local application/library specific imports
+from langchain_community.chat_models import ChatOpenAI
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 from starlette.staticfiles import StaticFiles
+
+from utils.history import ChatHistory, Message
 
 load_dotenv()
 API_KEY = os.getenv('OPENAI_API_KEY', 'default_value_if_not_found')
 MODEL = os.getenv('MODEL', 'gpt-3.5-turbo')
-
 
 app = FastAPI()
 app.add_middleware(
@@ -27,22 +32,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 app.mount("/static", StaticFiles(directory=".", html=True), name="static")
 
 
 @app.get("/hi")
 def read_root():
+    """
+    This method returns a greeting message to test the service.
+
+    Returns:
+    dict: A dictionary containing a greeting message {"Hello": "World"}
+    """
     return {"Hello": "World"}
-
-
-class Message(BaseModel):
-    role: str
-    content: str
-
-
-class ChatHistory(BaseModel):
-    messages: List[Message]
 
 
 async def verify_authorization(authorization: Optional[str] = Header(None)):
@@ -51,6 +52,18 @@ async def verify_authorization(authorization: Optional[str] = Header(None)):
 
 
 async def process_tokens_history(tokens: List[Message]) -> AsyncIterable[str]:
+    """
+    Async function to process and generate responses for a list of given tokens.
+
+    The function initiates a chat model using the OpenAI API and streams the tokens through it, yielding
+    the generated responses one by one. When the incoming tokens are processed, it signals the task completion.
+
+    Parameters:
+    tokens (List[Message]): List of messages to be processed. It can contain messages from both the user (human) and the AI.
+
+    Returns:
+    AsyncIterable[str]: Asynchronously generated responses from the model for each token in the input list.
+    """
     callback = AsyncIteratorCallbackHandler()
     model = ChatOpenAI(
         streaming=True,
@@ -91,10 +104,31 @@ async def process_tokens_history(tokens: List[Message]) -> AsyncIterable[str]:
 
 
 @app.post("/stream_history/")
-async def stream_history(
-        chat_history: ChatHistory
-        # , authorization: Optional[str] = Depends(verify_authorization)
-):
+async def stream_history(chat_history: ChatHistory
+                         # , authorization: Optional[str] = Depends(verify_authorization)
+                         ):
+    """
+    This method processes the chat history and returns a streaming response.
+
+    Parameters:
+    chat_history (ChatHistory): The chat history to be processed.
+
+    Returns:
+    StreamingResponse: A streaming response containing the processed chat history.
+
+    Example:
+        curl https://api.openai.com/v1/chat/completions
+        -H "Content-Type: application/json"
+        -H "Authorization: Bearer YOUR_API_KEY"
+        -d '{
+        "model": "gpt-4",
+        "messages": [
+          {"role": "system", "content": "You are a helpful assistant."},
+          {"role": "user", "content": "Tell me a joke."}
+        ],
+        "temperature": 0.7
+        }'
+    """
     generator = process_tokens_history(chat_history.messages)
     return StreamingResponse(generator, media_type="text/event-stream")
 
